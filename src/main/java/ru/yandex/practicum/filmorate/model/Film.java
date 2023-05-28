@@ -31,7 +31,7 @@ public class Film {
     @Max(value = 6500, message = "должно быть не больше 6500 минут.")
     private Integer duration;
     @Builder.Default
-    private Set<Long> usersWhoLike = new HashSet<>();
+    private Map<Long, Integer> usersWhoLike = new HashMap<>();
     @Builder.Default
     private Set<Director> directors = new HashSet<>();
     private long rate;

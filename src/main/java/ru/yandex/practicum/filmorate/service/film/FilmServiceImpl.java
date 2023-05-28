@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.service.film;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.relational.core.sql.In;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exceptions.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.IncorrectParameterException;
@@ -56,7 +57,7 @@ public class FilmServiceImpl implements FilmService {
     }
 
     @Override
-    public void addLike(Long id, Long userId) {
+    public void addLike(Long id, Long userId, Integer mark) {
         isUserIdPositive(userId);
 
         Optional<Film> filmStorageById = filmStorage.getById(id);
@@ -64,17 +65,17 @@ public class FilmServiceImpl implements FilmService {
         if (filmStorageById.isEmpty()) {
             throw new FilmNotFoundException("Ошибка, данный фильм не найден.");
         }
-        filmStorage.addLike(id, userId);
+        filmStorage.addLike(id, userId, mark);
         Film film = filmStorageById.get();
         film.setRate(film.getRate() + 1);
 
-        Set<Long> usersWhoLike = film.getUsersWhoLike();
+        Map<Long, Integer> usersWhoLike = film.getUsersWhoLike();
 
         if (usersWhoLike == null) {
             return;
         }
 
-        usersWhoLike.add(userId);
+        usersWhoLike.put(userId, mark);
         film.setUsersWhoLike(usersWhoLike);
 
         filmStorage.update(film);
@@ -103,7 +104,7 @@ public class FilmServiceImpl implements FilmService {
         if (film.getRate() > 1) {
             film.setRate(film.getRate() - 1);
 
-            Set<Long> usersWhoLike = film.getUsersWhoLike();
+            Map<Long, Integer> usersWhoLike = film.getUsersWhoLike();
 
             if (usersWhoLike == null) {
                 return;

@@ -83,9 +83,10 @@ public class FilmController {
 
     @PutMapping("/{id}/like/{userId}")
     public ResponseEntity<String> addLikeFilm(@PathVariable Long id,
-                                              @PathVariable Long userId) {
+                                              @PathVariable Long userId,
+                                              @RequestParam(name = "mark", defaultValue = "10") Integer mark) {
 
-        filmService.addLike(id, userId);
+        filmService.addLike(id, userId, mark);
         feedService.saveAddLike(userId, id);
 
         log.info("Лайк поставлен фильм с айди - {}", id);

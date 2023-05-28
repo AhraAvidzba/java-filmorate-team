@@ -189,7 +189,7 @@ public class UserServiceImpl implements UserService {
         Map<User, Map<Film, Double>> data = new HashMap<>();
         for (User user : users) {
             Map<Film, Double> likedFilms = films.stream()
-                    .filter(x -> x.getUsersWhoLike().contains(user.getId()))
+                    .filter(x -> x.getUsersWhoLike().containsKey(user.getId()))
                     .collect(Collectors.toMap(x -> x, y -> 1.0));
             data.put(user, likedFilms);
         }
@@ -197,7 +197,7 @@ public class UserServiceImpl implements UserService {
         SlopeOneUtil.slopeOne(data);
         //Ограничиваю рекомендации пятью фильмами
         return SlopeOneUtil.slopeOne(data).stream()
-                .filter(x -> !x.getUsersWhoLike().contains(id))
+                .filter(x -> !x.getUsersWhoLike().containsKey(id))
                 .limit(5).collect(Collectors.toList());
     }
 

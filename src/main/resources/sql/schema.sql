@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS film_genre
 CREATE TABLE IF NOT EXISTS likes
 (
     film_id BIGINT REFERENCES film (film_id) ON DELETE CASCADE,
-    user_id BIGINT REFERENCES users (user_id) ON DELETE CASCADE
+    user_id BIGINT REFERENCES users (user_id) ON DELETE CASCADE,
+    mark INT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS film_mpa

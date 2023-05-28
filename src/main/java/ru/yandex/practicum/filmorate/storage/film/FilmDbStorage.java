@@ -103,7 +103,7 @@ public class FilmDbStorage implements FilmStorage {
                     "ORDER BY d.director_id";
 
     private static final String FIND_LIKES =
-            "SELECT l.user_id " +
+            "SELECT l.user_id, l.mark " +
                     "FROM likes l " +
                     "WHERE l.film_id = ? ";
     private static final String FIND_TOP_FILMS = "SELECT F.FILM_ID AS ID, F.NAME, F.RELEASE_DATE, F.DESCRIPTION," +
@@ -121,7 +121,7 @@ public class FilmDbStorage implements FilmStorage {
                     "LEFT JOIN FILM_MPA M ON F.FILM_ID = M.FILM_ID " +
                     "LEFT JOIN MPA MP ON M.MPA_ID = MP.mpa_id " +
                     "WHERE F.FILM_ID=? ";
-    private static final String INSERT_LIKE = "INSERT INTO likes (film_id, user_id) VALUES (?,?)";
+    private static final String INSERT_LIKE = "INSERT INTO likes (film_id, user_id, mark) VALUES (?,?,?)";
     private static final String DELETE_LIKE = "DELETE FROM likes WHERE film_id=? AND user_id=? ";
     private static final String DELETE_BY_ID = "DELETE FROM film WHERE film_id = ?";
     private static final String DELETE_FILM_GENRE = "DELETE FROM film_genre WHERE film_id=? AND genre_id=? ";
@@ -300,9 +300,9 @@ public class FilmDbStorage implements FilmStorage {
             film.setDirectors(directors);
 
             SqlRowSet rsLikes = jdbcTemplate.queryForRowSet(FIND_LIKES, filmId);
-            Set<Long> likes = new HashSet<>();
+            Map<Long, Integer> likes = new HashMap<>();
             while (rsLikes.next()) {
-                likes.add(rsLikes.getLong("user_id"));
+                likes.put(rsLikes.getLong("user_id"), rsLikes.getInt("mark"));
             }
             film.setUsersWhoLike(likes);
 
@@ -322,7 +322,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
-    public void addLike(Long filmId, Long userId) {
+    public void addLike(Long filmId, Long userId, Integer mark) {
         Optional<Film> byId = getById(filmId);
 
         if (byId.isPresent()) {
@@ -331,7 +331,7 @@ public class FilmDbStorage implements FilmStorage {
             update(film);
         }
 
-        jdbcTemplate.update(INSERT_LIKE, filmId, userId);
+        jdbcTemplate.update(INSERT_LIKE, filmId, userId, mark);
     }
 
     @Override
