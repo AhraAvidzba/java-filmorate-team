@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.storage.film;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.relational.core.sql.In;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -464,9 +465,9 @@ public class FilmDbStorage implements FilmStorage {
         film.setDirectors(directors);
 
         SqlRowSet rsLikes = jdbcTemplate.queryForRowSet(FIND_LIKES, film.getId());
-        Set<Long> likes = new HashSet<>();
+        Map<Long, Integer> likes = new HashMap<>();
         while (rsLikes.next()) {
-            likes.add(rsLikes.getLong("user_id"));
+            likes.put(rsLikes.getLong("user_id"), rsLikes.getInt("mark"));
         }
         film.setUsersWhoLike(likes);
 
@@ -483,7 +484,7 @@ public class FilmDbStorage implements FilmStorage {
                 String description = rs.getString("description");
                 LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
                 int duration = rs.getInt("duration");
-                int rate = rs.getInt("rate");
+                Float rate = rs.getFloat("rate");
                 Mpa mpa = new Mpa(rs.getLong("mpa_id"), rs.getString("mpa_name"));
                 film = Film.builder()
                         .id(id)
@@ -523,9 +524,9 @@ public class FilmDbStorage implements FilmStorage {
             film.setDirectors(directors);
 
             SqlRowSet rsLikes = jdbcTemplate.queryForRowSet(FIND_LIKES, film.getId());
-            Set<Long> likes = new HashSet<>();
+            Map<Long, Integer> likes = new HashMap<>();
             while (rsLikes.next()) {
-                likes.add(rsLikes.getLong("user_id"));
+                likes.put(rsLikes.getLong("user_id"), rsLikes.getInt("mark"));
             }
             film.setUsersWhoLike(likes);
         }
