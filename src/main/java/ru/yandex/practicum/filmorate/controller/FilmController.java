@@ -45,7 +45,6 @@ public class FilmController {
     public ResponseEntity<String> createFilm(@RequestBody @Valid Film film, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             log.error("Ошибки валидации при создании фильма - {}", bindingResult.getAllErrors());
-
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(gson.toJson(film));

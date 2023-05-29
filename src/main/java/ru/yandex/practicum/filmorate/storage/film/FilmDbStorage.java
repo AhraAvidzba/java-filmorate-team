@@ -168,7 +168,7 @@ public class FilmDbStorage implements FilmStorage {
             stmt.setString(2, film.getDescription());
             stmt.setDate(3, Date.valueOf(film.getReleaseDate()));
             stmt.setInt(4, film.getDuration());
-            stmt.setLong(5, film.getRate());
+            stmt.setFloat(5, film.getRate() == null ? 0 : film.getRate());
             return stmt;
         }, keyHolder);
 
@@ -265,7 +265,7 @@ public class FilmDbStorage implements FilmStorage {
                     .releaseDate(rs.getDate("release_date").toLocalDate())
                     .description(rs.getString("description"))
                     .duration(rs.getInt("duration"))
-                    .rate(rs.getLong("rate"))
+                    .rate(rs.getFloat("rate"))
                     .build();
 
             Mpa mpa = Mpa.builder()
@@ -425,7 +425,7 @@ public class FilmDbStorage implements FilmStorage {
         String description = rs.getString("description");
         LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
         int duration = rs.getInt("duration");
-        int rate = rs.getInt("rate");
+        Float rate = rs.getFloat("rate");
         Mpa mpa = new Mpa(rs.getLong("mpa_id"), rs.getString("mpa_name"));
 
         Film film = Film.builder()

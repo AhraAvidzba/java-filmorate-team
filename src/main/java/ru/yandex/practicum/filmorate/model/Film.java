@@ -34,7 +34,7 @@ public class Film {
     private Map<Long, Integer> usersWhoLike = new HashMap<>();
     @Builder.Default
     private Set<Director> directors = new HashSet<>();
-    private long rate;
+    private Float rate;
     private Mpa mpa;
     @Builder.Default
     private Set<Genre> genres = new TreeSet<>(Comparator.comparing(Genre::getId));

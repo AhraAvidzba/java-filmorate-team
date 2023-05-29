@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS film
     description  VARCHAR,
     release_date timestamp,
     duration     INT,
-    rate         BIGINT
+    rate         REAL
 );
 CREATE TABLE IF NOT EXISTS film_director
 (

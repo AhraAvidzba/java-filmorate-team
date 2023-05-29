@@ -190,15 +190,15 @@ public class UserServiceImpl implements UserService {
         for (User user : users) {
             Map<Film, Double> likedFilms = films.stream()
                     .filter(x -> x.getUsersWhoLike().containsKey(user.getId()))
-                    .collect(Collectors.toMap(x -> x, y -> 1.0));
+                    .collect(Collectors.toMap(f -> f, f -> f.getUsersWhoLike().get(user.getId()).doubleValue()));
             data.put(user, likedFilms);
         }
         SlopeOneUtil.forUser = getById(id);
         SlopeOneUtil.slopeOne(data);
-        //Ограничиваю рекомендации пятью фильмами
+        //Ограничиваю рекомендации шестью фильмами
         return SlopeOneUtil.slopeOne(data).stream()
-                .filter(x -> !x.getUsersWhoLike().containsKey(id))
-                .limit(5).collect(Collectors.toList());
+                .filter(x -> !x.getUsersWhoLike().containsKey(id) && x.getRate() > 5)
+                .limit(6).collect(Collectors.toList());
     }
 
     private static void setNameIfItEmpty(User user) {

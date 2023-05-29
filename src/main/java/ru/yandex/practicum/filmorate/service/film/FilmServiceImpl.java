@@ -78,6 +78,12 @@ public class FilmServiceImpl implements FilmService {
         usersWhoLike.put(userId, mark);
         film.setUsersWhoLike(usersWhoLike);
 
+        //Обновляю рейтинг фильма
+        Collection<Integer> marks = film.getUsersWhoLike().values();
+        if (marks.size() > 0) {
+            Float rate = ((Double) (marks.stream().mapToDouble(a -> a).sum() / marks.size())).floatValue();
+            film.setRate(rate);
+        }
         filmStorage.update(film);
     }
 
