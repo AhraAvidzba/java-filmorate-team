@@ -160,7 +160,7 @@ public class FilmController {
 
     @GetMapping("/search")
     public ResponseEntity<List<Film>> searchFilms(@RequestParam("query") String query,
-                                                  @RequestParam("by") String by) {
+                                                  @RequestParam("by") List<String> by) {
         List<Film> films = new ArrayList<>();
         if (by.contains("title")) {
             films.addAll(filmService.findByTitleContainingIgnoreCase(query));

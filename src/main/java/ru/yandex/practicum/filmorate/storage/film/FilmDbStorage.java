@@ -3,9 +3,9 @@ package ru.yandex.practicum.filmorate.storage.film;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.relational.core.sql.In;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -38,7 +38,7 @@ public class FilmDbStorage implements FilmStorage {
             "LEFT JOIN MPA AS m ON fm.MPA_ID = m.MPA_ID " +
             "LEFT JOIN (SELECT FILM_ID, COUNT(USER_ID) AS COUNT_LIKE FROM LIKES GROUP BY FILM_ID) AS likes ON " +
             "f.FILM_ID = likes.FILM_ID " +
-            "WHERE d.director_name ILIKE ?" +
+            "WHERE d.director_name ILIKE :part " +
             "ORDER BY likes.COUNT_LIKE DESC";
     public static final String FIND_BY_TITLE_CONTAINING_IGNORE_CASE = "SELECT f.*, l.GENRE_ID, l.GENRE_NAME, m.*," +
             " likes.COUNT_LIKE FROM FILM AS f " +
@@ -48,7 +48,7 @@ public class FilmDbStorage implements FilmStorage {
             "LEFT JOIN MPA AS m ON fm.MPA_ID = m.MPA_ID " +
             "LEFT JOIN (SELECT FILM_ID, COUNT(USER_ID) AS COUNT_LIKE FROM LIKES GROUP BY FILM_ID) AS likes ON " +
             "f.FILM_ID = likes.FILM_ID " +
-            "WHERE f.name ILIKE ? " +
+            "WHERE f.name ILIKE :part " +
             "ORDER BY likes.COUNT_LIKE DESC";
     public static final String GET_FILMS_BY_DIRECTOR_SORTED_BY_YEAR = "SELECT f.*, l.GENRE_ID, l.GENRE_NAME, m.*," +
             " likes.COUNT_LIKE, d.* FROM DIRECTORS AS d " +
@@ -134,6 +134,8 @@ public class FilmDbStorage implements FilmStorage {
     private static final String GET_DIRECTORS = "SELECT * FROM directors AS d" +
             " JOIN film_director AS fd ON d.director_id = fd.director_id WHERE fd.film_id = ?";
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate nmJdbcTemplate;
+
 
     @Override
     public Optional<Film> save(Film film) {
@@ -177,12 +179,13 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     public Film getFilmFull(Long id) {
-        return getListOfFilms(FIND_FILM_FULL, id).get(id);
+        List<Film> films = jdbcTemplate.query(FIND_FILM_FULL, (rs, rowNum) -> rowMapperFilm(rs), id);
+        return films.isEmpty() ? null : films.get(0);
     }
 
     @Override
     public List<Film> getAll() {
-        return new ArrayList<>(getListOfFilms(FIND_ALL_FILMS, 0).values());
+       return jdbcTemplate.query(FIND_ALL_FILMS, (rs, rowNum) -> rowMapperFilm(rs));
     }
 
     @Override
@@ -238,85 +241,13 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Optional<Film> getById(Long id) {
-        SqlRowSet userRs = jdbcTemplate.queryForRowSet(FIND_FILM_FULL, id);
-
-        if (userRs.next()) {
-            Film film = getListOfFilms(FIND_FILM_FULL, id).get(id);
-            return Optional.of(film);
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private Map<Long, Film> getListOfFilms(String sql, long id) {
-        Map<Long, Film> films = new LinkedHashMap<>();
-        SqlRowSet rs;
-
-        if (id == 0) {
-            rs = jdbcTemplate.queryForRowSet(sql);
-        } else {
-            rs = jdbcTemplate.queryForRowSet(sql, id);
-        }
-
-        while (rs.next()) {
-            long filmId = rs.getLong("film_id");
-            Film film = Film.builder()
-                    .id(filmId)
-                    .name(rs.getString("name"))
-                    .releaseDate(rs.getDate("release_date").toLocalDate())
-                    .description(rs.getString("description"))
-                    .duration(rs.getInt("duration"))
-                    .rate(rs.getFloat("rate"))
-                    .build();
-
-            Mpa mpa = Mpa.builder()
-                    .id(rs.getLong("mpa_id"))
-                    .name(rs.getString("mpa_name"))
-                    .build();
-
-            film.setMpa(mpa);
-            Set<Genre> genres = new TreeSet<>(Comparator.comparing(Genre::getId));
-
-            SqlRowSet rsGenres = jdbcTemplate.queryForRowSet(FIND_GENRES, filmId);
-            while (rsGenres.next()) {
-                Genre genre = Genre.builder()
-                        .id(rsGenres.getLong("genre_id"))
-                        .name(rsGenres.getString("genre_name"))
-                        .build();
-                genres.add(genre);
-            }
-            film.setGenres(genres);
-
-            Set<Director> directors = new HashSet<>();
-
-            SqlRowSet rsDirectors = jdbcTemplate.queryForRowSet(FIND_DIRECTORS, filmId);
-            while (rsDirectors.next()) {
-                Director director = Director.builder()
-                        .id(rsDirectors.getLong("director_id"))
-                        .name(rsDirectors.getString("director_name"))
-                        .build();
-                directors.add(director);
-
-            }
-            film.setDirectors(directors);
-
-            SqlRowSet rsLikes = jdbcTemplate.queryForRowSet(FIND_LIKES, filmId);
-            Map<Long, Integer> likes = new HashMap<>();
-            while (rsLikes.next()) {
-                likes.put(rsLikes.getLong("user_id"), rsLikes.getInt("mark"));
-            }
-            film.setUsersWhoLike(likes);
-
-            films.put(filmId, film);
-        }
-
-        return films;
+        List<Film> films = jdbcTemplate.query(FIND_FILM_FULL, (rs, rowNum) -> rowMapperFilm(rs), id);
+        return films.isEmpty() ? Optional.empty() : Optional.of(films.get(0));
     }
 
     @Override
     public List<Film> getTheMostPopularFilms(int count) {
-        ArrayList<Film> films = new ArrayList<>(getListOfFilms(FIND_TOP_FILMS, count).values());
-
+        List<Film> films =  jdbcTemplate.query(FIND_TOP_FILMS, (rs, rowNum) -> rowMapperFilm(rs), count);
         return films.stream()
                 .sorted(Comparator.comparing(Film::sumLikes).reversed())
                 .collect(Collectors.toList());
@@ -350,7 +281,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getFilmsLikedByUser(Long userId) {
-        return new ArrayList<>(getListOfFilms(FIND_FILMS_LIKED_BY_USER, userId).values());
+        return jdbcTemplate.query(FIND_FILMS_LIKED_BY_USER, (rs, rowNum) -> rowMapperFilm(rs), userId);
     }
 
     private void addDirectorToFilm(Film film) {
@@ -372,10 +303,6 @@ public class FilmDbStorage implements FilmStorage {
 
     private boolean deleteAllDirectorsFromFilm(long filmId) {
         return jdbcTemplate.update(DELETE_ALL_DIRECTORS_FROM_FILM, filmId) > 0;
-    }
-
-    public boolean containsFilm(long id) {
-        return jdbcTemplate.queryForRowSet(FIND_FILM_BY_ID, id).next();
     }
 
     private Set<Long> removeDoubles(Set<Genre> genres) {
@@ -410,14 +337,21 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> findByTitleContainingIgnoreCase(String query) {
-        String param = "%" + query + "%";
-        return jdbcTemplate.query(FIND_BY_TITLE_CONTAINING_IGNORE_CASE, new Object[]{param}, this::rowMapperFilmList);
+        return findCompatibility(query, FIND_BY_TITLE_CONTAINING_IGNORE_CASE);
+
     }
 
     @Override
     public List<Film> findByDirectorsNameContainingIgnoreCase(String query) {
+        return findCompatibility(query, FIND_BY_DIRECTORS_NAME_CONTAINING_IGNORE_CASE);
+    }
+
+    public List<Film> findCompatibility(String query, String sql) {
         String param = "%" + query + "%";
-        return jdbcTemplate.query(FIND_BY_DIRECTORS_NAME_CONTAINING_IGNORE_CASE, new Object[]{param}, this::rowMapperFilmList);
+        List<Film> films = nmJdbcTemplate.query(sql,
+                Collections.singletonMap("part", param),
+                (rs, rowNum) -> rowMapperFilm(rs));
+        return new ArrayList<>(films.stream().collect(Collectors.toMap(Film::getId, p -> p, (p, q) -> p)).values());
     }
 
     private Film rowMapperFilm(ResultSet rs) throws SQLException {
@@ -472,64 +406,5 @@ public class FilmDbStorage implements FilmStorage {
         film.setUsersWhoLike(likes);
 
         return film;
-    }
-
-    private List<Film> rowMapperFilmList(ResultSet rs) throws SQLException {
-        Map<Long, Film> filmMap = new HashMap<>();
-        while (rs.next()) {
-            long id = rs.getLong("film_id");
-            Film film = filmMap.get(id);
-            if (film == null) {
-                String name = rs.getString("name");
-                String description = rs.getString("description");
-                LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
-                int duration = rs.getInt("duration");
-                Float rate = rs.getFloat("rate");
-                Mpa mpa = new Mpa(rs.getLong("mpa_id"), rs.getString("mpa_name"));
-                film = Film.builder()
-                        .id(id)
-                        .name(name)
-                        .description(description)
-                        .releaseDate(releaseDate)
-                        .duration(duration)
-                        .rate(rate)
-                        .mpa(mpa)
-                        .build();
-                filmMap.put(id, film);
-            }
-
-            Set<Genre> genres = new TreeSet<>(Comparator.comparing(Genre::getId));
-
-            SqlRowSet rsGenres = jdbcTemplate.queryForRowSet(FIND_GENRES, film.getId());
-            while (rsGenres.next()) {
-                Genre genre = Genre.builder()
-                        .id(rsGenres.getLong("genre_id"))
-                        .name(rsGenres.getString("genre_name"))
-                        .build();
-                genres.add(genre);
-            }
-            film.setGenres(genres);
-
-            Set<Director> directors = new HashSet<>();
-
-            SqlRowSet rsDirectors = jdbcTemplate.queryForRowSet(FIND_DIRECTORS, film.getId());
-            while (rsDirectors.next()) {
-                Director director = Director.builder()
-                        .id(rsDirectors.getLong("director_id"))
-                        .name(rsDirectors.getString("director_name"))
-                        .build();
-                directors.add(director);
-
-            }
-            film.setDirectors(directors);
-
-            SqlRowSet rsLikes = jdbcTemplate.queryForRowSet(FIND_LIKES, film.getId());
-            Map<Long, Integer> likes = new HashMap<>();
-            while (rsLikes.next()) {
-                likes.put(rsLikes.getLong("user_id"), rsLikes.getInt("mark"));
-            }
-            film.setUsersWhoLike(likes);
-        }
-        return new ArrayList<>(filmMap.values());
     }
 }
