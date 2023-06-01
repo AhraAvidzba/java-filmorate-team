@@ -73,9 +73,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getAll() {
-        List<User> userList = jdbcTemplate.query(FIND_ALL_USERS,
-                (rs, row) -> UserMapper.makeUser(rs, jdbcTemplate));
-        return userList;
+        return jdbcTemplate.query(FIND_ALL_USERS, new UserMapper(jdbcTemplate));
     }
 
     @Override
@@ -105,8 +103,7 @@ public class UserDbStorage implements UserStorage {
     public Optional<User> getById(Long id) {
         SqlRowSet userRs = jdbcTemplate.queryForRowSet(FIND_USER_BY_ID, id);
         if (userRs.next()) {
-            User user = jdbcTemplate.queryForObject(FIND_USER_BY_ID,
-                    (rs, row) -> UserMapper.makeUser(rs, jdbcTemplate), id);
+            User user = jdbcTemplate.queryForObject(FIND_USER_BY_ID, new UserMapper(jdbcTemplate), id);
             return Optional.of(user);
         } else {
             return Optional.empty();
@@ -125,11 +122,11 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> getCommonFriends(Long userId, Long otherUserId) {
         return new ArrayList<>(jdbcTemplate
-                .query(FIND_COMMON_FRIENDS, this::mapRowToUser, userId, otherUserId));
+                .query(FIND_COMMON_FRIENDS, new UserMapper(jdbcTemplate), userId, otherUserId));
     }
 
     private User getUser(Long id) {
-        List<User> users = jdbcTemplate.query(FIND_USER_BY_ID, this::mapRowToUser, id);
+        List<User> users = jdbcTemplate.query(FIND_USER_BY_ID, new UserMapper(jdbcTemplate), id);
 
         if (users.isEmpty()) {
             Optional.empty();
@@ -139,7 +136,7 @@ public class UserDbStorage implements UserStorage {
             user.setFriendsId(friends.stream().map(User::getId).collect(Collectors.toSet()));
             return user;
         }
-        return jdbcTemplate.queryForObject(FIND_USER_BY_ID, this::mapRowToUser, id);
+        return jdbcTemplate.queryForObject(FIND_USER_BY_ID, new UserMapper(jdbcTemplate), id);
     }
 
     @Override
@@ -149,16 +146,6 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(Long userId) {
-        return new ArrayList<>(jdbcTemplate.query(FIND_FRIENDS_BY_ID, this::mapRowToUser, userId));
-    }
-
-    private User mapRowToUser(ResultSet rs, long rowNum) throws SQLException {
-        return User.builder()
-                .id(rs.getLong("user_id"))
-                .login(rs.getString("login"))
-                .name(rs.getString("name"))
-                .email(rs.getString("email"))
-                .birthday(rs.getDate("birthday").toLocalDate())
-                .build();
+        return new ArrayList<>(jdbcTemplate.query(FIND_FRIENDS_BY_ID, new UserMapper(jdbcTemplate), userId));
     }
 }
