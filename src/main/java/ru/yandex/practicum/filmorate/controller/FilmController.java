@@ -45,7 +45,6 @@ public class FilmController {
     public ResponseEntity<String> createFilm(@RequestBody @Valid Film film, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             log.error("Ошибки валидации при создании фильма - {}", bindingResult.getAllErrors());
-
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(gson.toJson(film));
@@ -83,9 +82,10 @@ public class FilmController {
 
     @PutMapping("/{id}/like/{userId}")
     public ResponseEntity<String> addLikeFilm(@PathVariable Long id,
-                                              @PathVariable Long userId) {
+                                              @PathVariable Long userId,
+                                              @RequestParam(name = "mark", defaultValue = "10") Integer mark) {
 
-        filmService.addLike(id, userId);
+        filmService.addLike(id, userId, mark);
         feedService.saveAddLike(userId, id);
 
         log.info("Лайк поставлен фильм с айди - {}", id);
@@ -160,7 +160,7 @@ public class FilmController {
 
     @GetMapping("/search")
     public ResponseEntity<List<Film>> searchFilms(@RequestParam("query") String query,
-                                                  @RequestParam("by") String by) {
+                                                  @RequestParam("by") List<String> by) {
         List<Film> films = new ArrayList<>();
         if (by.contains("title")) {
             films.addAll(filmService.findByTitleContainingIgnoreCase(query));

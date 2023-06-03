@@ -56,7 +56,7 @@ public class FilmServiceImpl implements FilmService {
     }
 
     @Override
-    public void addLike(Long id, Long userId) {
+    public void addLike(Long id, Long userId, Integer mark) {
         isUserIdPositive(userId);
 
         Optional<Film> filmStorageById = filmStorage.getById(id);
@@ -64,19 +64,25 @@ public class FilmServiceImpl implements FilmService {
         if (filmStorageById.isEmpty()) {
             throw new FilmNotFoundException("Ошибка, данный фильм не найден.");
         }
-        filmStorage.addLike(id, userId);
+        filmStorage.addLike(id, userId, mark);
         Film film = filmStorageById.get();
         film.setRate(film.getRate() + 1);
 
-        Set<Long> usersWhoLike = film.getUsersWhoLike();
+        Map<Long, Integer> usersWhoLike = film.getUsersWhoLike();
 
         if (usersWhoLike == null) {
             return;
         }
 
-        usersWhoLike.add(userId);
+        usersWhoLike.put(userId, mark);
         film.setUsersWhoLike(usersWhoLike);
 
+        //Обновляю рейтинг фильма
+        Collection<Integer> marks = film.getUsersWhoLike().values();
+        if (marks.size() > 0) {
+            Float rate = ((Double) (marks.stream().mapToDouble(a -> a).sum() / marks.size())).floatValue();
+            film.setRate(rate);
+        }
         filmStorage.update(film);
     }
 
@@ -103,7 +109,7 @@ public class FilmServiceImpl implements FilmService {
         if (film.getRate() > 1) {
             film.setRate(film.getRate() - 1);
 
-            Set<Long> usersWhoLike = film.getUsersWhoLike();
+            Map<Long, Integer> usersWhoLike = film.getUsersWhoLike();
 
             if (usersWhoLike == null) {
                 return;
