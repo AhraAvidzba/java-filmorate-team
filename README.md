@@ -6,7 +6,7 @@
 по названию фильма и режиссеру.
 
 ### ER диаграмма
-![image](https://github.com/moongrail/java-filmorate/assets/97224620/ed16fbce-30e2-411d-b0e4-3a1135330683)
+![image](src/main/resources/ER-diagram.png)
 
 ### Краткое описание сущностей
 1. Таблица `users` содержит информацию о пользователях. В ней хранятся идентификатор пользователя (`user_id`),
